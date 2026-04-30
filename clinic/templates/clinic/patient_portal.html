@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Health Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<nav class="navbar navbar-dark bg-primary mb-4">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1">JMCFI Patient Portal</span>
+        <div class="d-flex align-items-center text-white">
+            <span class="me-3">Welcome, {{ patient.first_name }}</span>
+            <a href="{% url 'patient_logout' %}" class="btn btn-sm btn-outline-light">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row">
+        
+        <div class="col-md-4">
+            <h4 class="mb-3">Upcoming Visits</h4>
+            {% for appt in upcoming %}
+                <div class="card shadow-sm mb-3 border-info">
+                    <div class="card-body">
+                        <h5 class="card-title text-info">{{ appt.appointment_date }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">Time: {{ appt.appointment_time }}</h6>
+                        <p class="card-text mb-1"><strong>Doctor:</strong> Dr. {{ appt.doctor.name }}</p>
+                        <span class="badge bg-info">{{ appt.get_status_display }}</span>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="alert alert-light border text-muted">You have no upcoming appointments.</div>
+            {% endfor %}
+        </div>
+
+        <div class="col-md-8">
+    <h4 class="mb-3 fw-bold">Doctor's Recommendations</h4>
+    
+    {% for appt in past %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <strong class="text-primary">Visit Date: {{ appt.appointment_date }}</strong>
+                <span class="text-muted small">Dr. {{ appt.doctor.name }}</span>
+            </div>
+
+            <div class="card-body bg-light">
+                <h6 class="small fw-bold text-muted mb-1">Diagnosis:</h6>
+                <p class="mb-3">"{{ appt.doctor_diagnosis|default:"No diagnosis recorded." }}"</p>
+
+                <h6 class="small fw-bold text-muted mb-1">Recommendations:</h6>
+                <p class="mb-4">"{{ appt.doctor_recommendation|default:"No specific recommendations." }}"</p>
+
+                <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                    <div>
+                        {% if appt.prescriptions.exists %}
+                            <a href="{% url 'print_prescription' appt.id %}" target="_blank" class="btn btn-sm btn-primary fw-bold px-4 shadow-sm">
+                                📄 View & Print Prescription
+                            </a>
+                        {% else %}
+                            <span class="text-muted small"><em>No medication prescribed for this visit.</em></span>
+                        {% endif %}
+                    </div>
+                    
+                    <a href="{% url 'view_record' appt.id %}" class="btn btn-sm btn-outline-secondary px-3">View Full Record</a>
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="alert alert-light border text-center py-5 shadow-sm">
+            <p class="text-muted mb-0">No past consultation history available yet.</p>
+        </div>
+    {% endfor %}
+</div>
+
+    </div>
+</div>
+
+</body>
+</html>

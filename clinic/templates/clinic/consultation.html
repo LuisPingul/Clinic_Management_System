@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Consultation: {{ appointment.patient.first_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light pt-4">
+
+<div class="container" style="max-width: 900px;">
+    <div class="bg-primary text-white p-3 rounded-top d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Consultation: {{ appointment.patient.first_name }} {{ appointment.patient.last_name }}</h5>
+        <small>Date of Birth: {{ appointment.patient.date_of_birth }} | Scheduled For: {{ appointment.appointment_time }}</small>
+    </div>
+
+    <form method="POST" class="bg-white p-4 shadow-sm rounded-bottom border border-top-0">
+        {% csrf_token %}
+        <h5 class="text-primary mb-3">Medical Notes & Prescription</h5>
+
+       <div class="bg-light p-3 rounded border mb-4">
+    <div class="row text-center">
+        <div class="col-md-2 border-end">
+            <label class="small fw-bold text-muted d-block">Sex</label>
+            <span class="fw-bold">{{ appointment.patient.sex|default:"--" }}</span>
+        </div>
+        <div class="col-md-2 border-end">
+            <label class="small fw-bold text-muted d-block">Blood Type</label>
+            <span class="fw-bold">{{ appointment.patient.blood_type|default:"Unknown" }}</span>
+        </div>
+
+        <div class="col-md-2 border-end">
+            <label class="small fw-bold text-muted d-block">Height (cm)</label>
+            <input type="number" name="height" class="form-control form-control-sm text-center fw-bold" 
+                   value="{{ appointment.patient.height }}" placeholder="--">
+        </div>
+        <div class="col-md-2 border-end">
+            <label class="small fw-bold text-muted d-block">Weight (kg)</label>
+            <input type="number" name="weight" class="form-control form-control-sm text-center fw-bold" 
+                   value="{{ appointment.patient.weight }}" placeholder="--">
+        </div>
+        <div class="col-md-2 border-end">
+            <label class="small fw-bold text-muted d-block">Comorbidities</label>
+            <input type="text" name="comorbidities" class="form-control form-control-sm text-center fw-bold text-primary" 
+                   value="{{ appointment.patient.comorbidities }}" placeholder="None">
+        </div>
+        <div class="col-md-2">
+            <label class="small fw-bold text-muted d-block">Allergies</label>
+            <input type="text" name="allergies" class="form-control form-control-sm text-center fw-bold text-danger" 
+                   value="{{ appointment.patient.allergies }}" placeholder="None">
+        </div>
+    </div>
+</div>
+
+        <div class="mb-3">
+            <label class="form-label text-muted fw-bold">Symptoms / Patient's reported issues:</label>
+            <textarea name="symptoms" class="form-control" rows="2" placeholder="Enter patient's reported symptoms...">{{ appointment.symptoms|default:"" }}</textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label text-muted fw-bold">Doctor diagnosis:</label>
+            <textarea name="diagnosis" class="form-control" rows="2" placeholder="Enter formal diagnosis...">{{ appointment.doctor_diagnosis|default:"" }}</textarea>
+        </div>
+        <div class="mb-4">
+            <label class="form-label text-muted fw-bold">Doctor recommendation / Specific notes:</label>
+            <textarea name="recommendation" class="form-control" rows="2" placeholder="Enter diet recommendations, lifestyle changes...">{{ appointment.doctor_recommendation|default:"" }}</textarea>
+        </div>
+
+        <div class="border rounded p-3 mb-4">
+            <h6 class="text-muted fw-bold mb-3">Prescription Details (Structured)</h6>
+            
+            <div class="row g-2 mb-3">
+                <div class="col-md-3">
+                    <label class="small text-muted">Medicine Name</label>
+                    <input type="text" id="med_name" class="form-control" placeholder="e.g. Paracetamol">
+                </div>
+                <div class="col-md-2">
+                    <label class="small text-muted">Dosage</label>
+                    <input type="text" id="med_dosage" class="form-control" placeholder="e.g. 500mg">
+                </div>
+                <div class="col-md-2">
+                    <label class="small text-muted">Form</label>
+                    <select id="med_form" class="form-select">
+                        <option value="Tablet">Tablet(s)</option>
+                        <option value="Capsule">Capsule(s)</option>
+                        <option value="Tbsp">Tablespoon(s)</option>
+                        <option value="Drop">Drop(s)</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="small text-muted">Frequency (per day)</label>
+                    <input type="text" id="med_freq" class="form-control" placeholder="e.g. 3 times">
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="button" id="add_med_btn" class="btn btn-primary w-100 fw-bold">+</button>
+                </div>
+            </div>
+
+            <table class="table table-bordered text-center align-middle mb-0">
+                <thead class="table-light text-muted small">
+                    <tr>
+                        <th>Medicine</th><th>Dosage</th><th>Form</th><th>Frequency</th><th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="med_table_body">
+                    </tbody>
+            </table>
+            <div id="empty_med_msg" class="text-center text-muted small py-3 border border-top-0">No medicines added yet.</div>
+            
+            <input type="hidden" name="medicines_data" id="medicines_data">
+        </div>
+
+        <div class="row align-items-end mb-2">
+            <div class="col-md-4">
+                <label class="form-label text-muted fw-bold">Consultation Status:</label>
+                <select name="status" class="form-select fw-bold">
+                    <option value="IN_CONSULTATION" {% if appointment.status == 'IN_CONSULTATION' %}selected{% endif %}>In Consultation</option>
+                    <option value="CLEARED" {% if appointment.status == 'CLEARED' %}selected{% endif %}>Cleared / Paid</option>
+                </select>
+            </div>
+            <div class="col-md-8 text-end">
+                <a href="{% url 'home' %}" class="btn btn-outline-secondary me-2">Back to Dashboard</a>
+                <button type="submit" class="btn btn-success fw-bold px-4">Save Medical Record</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    let medicines = [];
+
+    // If there are existing prescriptions (e.g., doctor is editing), load them
+    {% for p in appointment.prescriptions.all %}
+        medicines.push({
+            name: "{{ p.medicine_name }}",
+            dosage: "{{ p.dosage }}",
+            form: "{{ p.form }}",
+            frequency: "{{ p.frequency }}"
+        });
+    {% endfor %}
+
+    function renderTable() {
+        const tbody = document.getElementById('med_table_body');
+        const emptyMsg = document.getElementById('empty_med_msg');
+        const hiddenInput = document.getElementById('medicines_data');
+        
+        tbody.innerHTML = '';
+        
+        if (medicines.length === 0) {
+            emptyMsg.style.display = 'block';
+        } else {
+            emptyMsg.style.display = 'none';
+            medicines.forEach((med, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-primary fw-bold">${med.name}</td>
+                        <td>${med.dosage}</td>
+                        <td>${med.form}</td>
+                        <td>${med.frequency}</td>
+                        <td><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeMed(${index})">Remove</button></td>
+                    </tr>
+                `;
+            });
+        }
+        
+        // Convert array to JSON string and store in hidden field for Django
+        hiddenInput.value = JSON.stringify(medicines);
+    }
+
+    document.getElementById('add_med_btn').addEventListener('click', function() {
+        const name = document.getElementById('med_name').value.trim();
+        const dosage = document.getElementById('med_dosage').value.trim();
+        const form = document.getElementById('med_form').value;
+        const freq = document.getElementById('med_freq').value.trim();
+
+        if (name && dosage && freq) {
+            medicines.push({name, dosage, form, frequency: freq});
+            
+            // Clear inputs
+            document.getElementById('med_name').value = '';
+            document.getElementById('med_dosage').value = '';
+            document.getElementById('med_freq').value = '';
+            
+            renderTable();
+        } else {
+            alert("Please fill out Medicine Name, Dosage, and Frequency.");
+        }
+    });
+
+    window.removeMed = function(index) {
+        medicines.splice(index, 1);
+        renderTable();
+    };
+
+    // Initial render
+    renderTable();
+</script>
+
+</body>
+</html>

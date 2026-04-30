@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clinic System Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="bg-dark py-2 px-4 d-flex justify-content-end align-items-center border-bottom border-dark">
+    <span class="small me-2 text-white fw-bold">👁 View System As:</span>
+    <div class="dropdown">
+        <button class="btn btn-sm btn-light dropdown-toggle fw-bold" type="button" data-bs-toggle="dropdown">
+            {% if active_role == 'admin' %}
+                Front Desk / Admin
+            {% elif selected_doctor %}
+                Dr. {{ selected_doctor.name }}
+            {% endif %}
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li><a class="dropdown-item fw-bold text-primary" href="{% url 'switch_role' 'admin' %}">Front Desk / Admin</a></li>
+            <li><hr class="dropdown-divider"></li>
+            {% for doc in doctors %}
+                <li><a class="dropdown-item fw-bold text-success" href="{% url 'switch_role' doc.id %}">Dr. {{ doc.name }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="container mt-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary mb-0">Clinic Dashboard</h1>
+        {% if active_role == 'admin' %}
+        <div>
+            <a href="{% url 'register_patient' %}" class="btn btn-primary btn-sm fw-bold">Register Patient</a>
+            <a href="{% url 'book_appointment' %}" class="btn btn-success btn-sm fw-bold">Book Appointment</a>
+        </div>
+        {% endif %}
+    </div>
+
+
+    {% if active_role == 'admin' %}
+        
+        <ul class="nav nav-tabs mb-3" id="dashboardTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if not search_query %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#queue-tab" type="button" role="tab">Appointments Queue</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link {% if search_query %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#directory-tab" type="button" role="tab">Patient Directory</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            
+            <div class="tab-pane fade {% if not search_query %}show active{% endif %}" id="queue-tab" role="tabpanel">
+                <div class="card shadow-sm border-top-0 rounded-top-0 border-0">
+                    <div class="card-body p-4 bg-white">
+                        
+                        <ul class="nav nav-pills mb-4 bg-light p-2 rounded" id="adminQueueSubTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link small fw-bold" data-bs-toggle="pill" data-bs-target="#past-queue" type="button" role="tab">Previous</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active small fw-bold" data-bs-toggle="pill" data-bs-target="#today-queue" type="button" role="tab">Today's Appointments</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link small fw-bold" data-bs-toggle="pill" data-bs-target="#future-queue" type="button" role="tab">Future</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content mt-3">
+                            
+                            <div class="tab-pane fade" id="past-queue" role="tabpanel">
+                                <h6 class="text-muted fw-bold mb-3">Historical Queue (Overdue/Past)</h6>
+                                {% regroup past_admin by appointment_date as grouped_past %}
+                                {% for group in grouped_past %}
+                                    <h6 class="small text-muted fw-bold mt-3 mb-2">{{ group.grouper }}</h6>
+                                    {% for appt in group.list %}
+                                        <div class="p-3 border shadow-sm mb-2 rounded bg-white d-flex justify-content-between align-items-center">
+                                            <div><strong>{{ appt.patient.first_name }} {{ appt.patient.last_name }}</strong><br><small class="text-muted">Dr. {{ appt.doctor.name }} at {{ appt.appointment_time }}</small></div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <select class="form-select form-select-sm status-dropdown {% if appt.status == 'CLEARED' %}bg-secondary text-white{% else %}bg-info text-white{% endif %}" data-url="{% url 'update_status' appt.id %}" style="width: 180px;" {% if appt.status == 'CLEARED' %}disabled{% endif %}>
+                                                    <option value="SCHEDULED" {% if appt.status == 'SCHEDULED' %}selected{% endif %}>Scheduled</option>
+                                                    <option value="WAITING" {% if appt.status == 'WAITING' %}selected{% endif %}>Waiting in Lobby</option>
+                                                    <option value="LATE" {% if appt.status == 'LATE' %}selected{% endif %}>Late</option>
+                                                    <option value="IN_CONSULTATION" {% if appt.status == 'IN_CONSULTATION' %}selected{% endif %}>In Consultation</option>
+                                                    <option value="CLEARED" {% if appt.status == 'CLEARED' %}selected{% endif %}>Cleared / Paid</option>
+                                                    <option value="NO_SHOW" {% if appt.status == 'NO_SHOW' %}selected{% endif %}>No-Show</option>
+                                                </select>
+                                                <a href="{% url 'view_record' appt.id %}" class="btn btn-sm btn-outline-secondary">View Record</a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% empty %}
+                                    <div class="p-3 text-center text-muted border rounded bg-light">No previous appointments found.</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="tab-pane fade show active" id="today-queue" role="tabpanel">
+                                <h6 class="text-primary fw-bold mb-3">Live Queue (Today)</h6>
+                                {% regroup today_admin by appointment_date as grouped_today %}
+                                {% for group in grouped_today %}
+                                    {% for appt in group.list %}
+                                        <div class="p-3 border shadow-sm mb-2 rounded bg-white d-flex justify-content-between align-items-center">
+                                            <div><strong>{{ appt.patient.first_name }} {{ appt.patient.last_name }}</strong><br><small class="text-muted">Dr. {{ appt.doctor.name }} at {{ appt.appointment_time }}</small></div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <select class="form-select form-select-sm status-dropdown {% if appt.status == 'CLEARED' %}bg-secondary text-white{% else %}bg-info text-white{% endif %}" data-url="{% url 'update_status' appt.id %}" style="width: 180px;" {% if appt.status == 'CLEARED' %}disabled{% endif %}>
+                                                    <option value="SCHEDULED" {% if appt.status == 'SCHEDULED' %}selected{% endif %}>Scheduled</option>
+                                                    <option value="WAITING" {% if appt.status == 'WAITING' %}selected{% endif %}>Waiting in Lobby</option>
+                                                    <option value="LATE" {% if appt.status == 'LATE' %}selected{% endif %}>Late</option>
+                                                    <option value="IN_CONSULTATION" {% if appt.status == 'IN_CONSULTATION' %}selected{% endif %}>In Consultation</option>
+                                                    <option value="CLEARED" {% if appt.status == 'CLEARED' %}selected{% endif %}>Cleared / Paid</option>
+                                                    <option value="NO_SHOW" {% if appt.status == 'NO_SHOW' %}selected{% endif %}>No-Show</option>
+                                                </select>
+                                                <a href="{% url 'view_record' appt.id %}" class="btn btn-sm btn-outline-secondary">View Record</a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% empty %}
+                                    <div class="p-3 text-center text-muted border rounded bg-light">No appointments scheduled for today.</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="tab-pane fade" id="future-queue" role="tabpanel">
+                                <h6 class="text-info fw-bold mb-3">Upcoming Queue (Planned)</h6>
+                                {% regroup future_admin by appointment_date as grouped_future %}
+                                {% for group in grouped_future %}
+                                    <h6 class="small text-muted fw-bold mt-3 mb-2">{{ group.grouper }}</h6>
+                                    {% for appt in group.list %}
+                                        <div class="p-3 border shadow-sm mb-2 rounded bg-white d-flex justify-content-between align-items-center">
+                                            <div><strong>{{ appt.patient.first_name }} {{ appt.patient.last_name }}</strong><br><small class="text-muted">Dr. {{ appt.doctor.name }} at {{ appt.appointment_time }}</small></div>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <select class="form-select form-select-sm status-dropdown {% if appt.status == 'CLEARED' %}bg-secondary text-white{% else %}bg-info text-white{% endif %}" data-url="{% url 'update_status' appt.id %}" style="width: 180px;" {% if appt.status == 'CLEARED' %}disabled{% endif %}>
+                                                    <option value="SCHEDULED" {% if appt.status == 'SCHEDULED' %}selected{% endif %}>Scheduled</option>
+                                                    <option value="WAITING" {% if appt.status == 'WAITING' %}selected{% endif %}>Waiting in Lobby</option>
+                                                    <option value="LATE" {% if appt.status == 'LATE' %}selected{% endif %}>Late</option>
+                                                    <option value="IN_CONSULTATION" {% if appt.status == 'IN_CONSULTATION' %}selected{% endif %}>In Consultation</option>
+                                                    <option value="CLEARED" {% if appt.status == 'CLEARED' %}selected{% endif %}>Cleared / Paid</option>
+                                                    <option value="NO_SHOW" {% if appt.status == 'NO_SHOW' %}selected{% endif %}>No-Show</option>
+                                                </select>
+                                                <a href="{% url 'view_record' appt.id %}" class="btn btn-sm btn-outline-secondary">View Record</a>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                {% empty %}
+                                    <div class="p-3 text-center text-muted border rounded bg-light">No future appointments found.</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade {% if search_query %}show active{% endif %}" id="directory-tab" role="tabpanel">
+                <div class="card shadow-sm border-top-0 rounded-top-0">
+                    <div class="card-body p-4 bg-light">
+                        <form method="GET" class="d-flex mb-4">
+                            <input type="text" name="search" class="form-control me-2" placeholder="Search by First or Last Name..." value="{{ search_query }}">
+                            <button type="submit" class="btn btn-outline-primary">Search</button>
+                            <a href="{% url 'home' %}" class="btn btn-outline-secondary ms-2">Clear</a>
+                        </form>
+                        <ul class="list-group">
+                            {% for patient in patients %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                                    <div>
+                                        <strong>{{ patient.first_name }} {{ patient.last_name }}</strong><br>
+                                        <small class="text-muted">Phone: {{ patient.phone_number }} | DOB: {{ patient.date_of_birth }}</small>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if patient.appointments.all %}
+                                            <a href="{% url 'view_record' patient.appointments.last.id %}" class="btn btn-sm btn-outline-primary">
+                                                View Record
+                                            </a>
+                                        {% endif %}
+
+                                        <a href="{% url 'view_patient' patient.id %}" class="btn btn-sm btn-outline-info px-3 fw-bold">
+                                            View Information
+                                        </a>
+                                    </div>
+                                </li>
+                            {% empty %}
+                                <li class="list-group-item text-center text-muted">No patients found.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    {% else %}
+        
+        <h4 class="text-success mb-3 fw-bold">Welcome, Dr. {{ selected_doctor.name }}</h4>
+        <ul class="nav nav-tabs mb-3" id="doctorTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#schedule-tab" type="button" role="tab">My Schedule</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#history-tab" type="button" role="tab">Past Consultations</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#mypatients-tab" type="button" role="tab">My Patients</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            
+            <div class="tab-pane fade show active" id="schedule-tab" role="tabpanel">
+                <div class="card shadow-sm border-top-0 rounded-top-0 border-0">
+                    <div class="card-body p-4 bg-white">
+                        
+                        <h6 class="text-success fw-bold mb-3 border-bottom pb-2">Pending Appointments</h6>
+                        <ul class="list-group mb-5">
+                            {% for appt in my_schedule_today %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+    <div>
+        <strong>{{ appt.patient.first_name }} {{ appt.patient.last_name }}</strong><br>
+        <small class="text-muted">{{ appt.appointment_date }} at {{ appt.appointment_time }} | Status: <span class="badge bg-info text-dark">{{ appt.get_status_display }}</span></small>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'view_patient' appt.patient.id %}" class="btn btn-sm btn-outline-info px-3 fw-bold">View Info</a>
+        
+        <a href="{% url 'view_record' appt.id %}" class="btn btn-sm btn-outline-secondary px-3 fw-bold">View Record</a>
+
+        {% if appt.status == 'SCHEDULED' or appt.status == 'WAITING' or appt.status == 'IN_CONSULTATION' %}
+            <a href="{% url 'consultation' appt.id %}" class="btn btn-sm btn-primary px-4 fw-bold shadow-sm">Consult</a>
+        {% else %}
+            <button class="btn btn-sm btn-secondary px-4 fw-bold" disabled>Locked</button>
+        {% endif %}
+    </div>
+</li>
+                            {% empty %}
+                                <div class="text-muted small px-3">No pending appointments.</div>
+                            {% endfor %}
+                        </ul>
+
+                        <h6 class="text-primary fw-bold mb-3 border-bottom pb-2 mt-4">Upcoming Appointments</h6>
+                        <ul class="list-group">
+                            {% for appt in future_appointments %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+    <div>
+        <strong>{{ appt.patient.first_name }} {{ appt.patient.last_name }}</strong><br>
+        <small class="text-muted">{{ appt.appointment_date }} at {{ appt.appointment_time }} | Status: <span class="badge bg-info text-dark">{{ appt.get_status_display }}</span></small>
+    </div>
+    
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'view_patient' appt.patient.id %}" class="btn btn-sm btn-outline-info px-3 fw-bold">View Info</a>
+        
+        <a href="{% url 'view_record' appt.id %}" class="btn btn-sm btn-outline-secondary px-3 fw-bold">View Record</a>
+
+        {% if appt.status == 'SCHEDULED' or appt.status == 'WAITING' or appt.status == 'IN_CONSULTATION' %}
+            <a href="{% url 'consultation' appt.id %}" class="btn btn-sm btn-outline-primary px-4 fw-bold">Consult</a>
+        {% else %}
+            <button class="btn btn-sm btn-secondary px-4 fw-bold" disabled title="Patient is not ready">Locked</button>
+        {% endif %}
+    </div>
+</li>
+                            {% empty %}
+                                <div class="text-muted small px-3">No future appointments scheduled.</div>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="history-tab" role="tabpanel">
+                <div class="card shadow-sm border-top-0 rounded-top-0 border-0">
+                    <div class="card-body p-4 bg-white">
+                        <ul class="list-group">
+                            {% for appt in past_consultations %}
+    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+        <div>
+            <strong>{{ appt.patient.first_name }} {{ appt.patient.last_name }}</strong><br>
+            <small class="text-muted">{{ appt.appointment_date }} | Diagnosis: {{ appt.doctor_diagnosis|truncatechars:40|default:"None" }}</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'view_patient' appt.patient.id %}" class="btn btn-sm btn-outline-info">View Info</a>
+            <a href="{% url 'view_record' appt.id %}" class="btn btn-sm btn-outline-secondary">View Record</a>
+        </div>
+    </li>
+{% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="mypatients-tab" role="tabpanel">
+                <div class="card shadow-sm border-top-0 rounded-top-0 border-0">
+                    <div class="card-body p-4 bg-white">
+                        <ul class="list-group">
+                            {% for patient in my_patients %}
+    <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+        <div>
+            <strong>{{ patient.first_name }} {{ patient.last_name }}</strong><br>
+            <small class="text-muted">DOB: {{ patient.date_of_birth }} | Phone: {{ patient.phone_number }}</small>
+        </div>
+        <a href="{% url 'view_patient' patient.id %}" class="btn btn-sm btn-outline-info px-4 fw-bold">
+            View Information
+        </a>
+    </li>
+{% endfor %}
+                                <div class="text-muted small px-3">No patients associated with you yet.</div>
+                            
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<form style="display: none;">{% csrf_token %}</form>
+
+<script>
+    document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+        dropdown.addEventListener('change', function() {
+            const targetUrl = this.getAttribute('data-url'); 
+            const newStatus = this.value;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            fetch(targetUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken
+                },
+                body: `status=${newStatus}`
+            })
+            .then(response => {
+                if(response.ok) {
+                    if (newStatus === 'CLEARED') {
+                        this.classList.replace('bg-info', 'bg-secondary');
+                        this.disabled = true;
+                    }
+                    setTimeout(() => location.reload(), 300); 
+                } else {
+                    alert('Error updating status. Check terminal.');
+                    location.reload();
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>

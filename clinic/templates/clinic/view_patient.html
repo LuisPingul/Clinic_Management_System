@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Profile: {{ patient.first_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="d-flex align-items-center">
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary me-2">Back to Dashboard</a>
+            <a href="{% url 'update_patient' patient.id %}" class="btn btn-warning fw-bold px-4 me-2">Edit Information</a>
+
+            <form action="{% url 'delete_patient' patient.id %}" method="POST" 
+                    onsubmit="return confirm('WARNING: Are you sure you want to permanently remove {{ patient.first_name }} {{ patient.last_name }}? All their medical records will be deleted. This cannot be undone.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger fw-bold">Remove Patient</button>
+            </form>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white fw-bold text-muted">Personal Information</div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3"><strong>Name:</strong> {{ patient.first_name }} {{ patient.last_name }}</div>
+                    <div class="col-md-3"><strong>DOB:</strong> {{ patient.date_of_birth }}</div>
+                    <div class="col-md-3"><strong>Sex:</strong> {{ patient.sex|default:"--" }}</div>
+                    <div class="col-md-3"><strong>Phone:</strong> {{ patient.phone_number }}</div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-3"><strong>Height:</strong> {{ patient.height }} cm</div>
+                    <div class="col-md-3"><strong>Weight:</strong> {{ patient.weight }} kg</div>
+                    <div class="col-md-3 text-primary"><strong>Comorbidities:</strong> {{ patient.comorbidities|default:"None" }}</div>
+                    <div class="col-md-3 text-danger"><strong>Allergies:</strong> {{ patient.allergies|default:"None" }}</div>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="fw-bold mb-3">Appointment History</h5>
+        <div class="list-group shadow-sm">
+            {% for appt in history %}
+                <a href="{% url 'view_record' appt.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <span class="fw-bold">{{ appt.appointment_date }}</span> 
+                        <span class="text-muted ms-2">with Dr. {{ appt.doctor.name }}</span>
+                    </div>
+                    <span class="badge bg-secondary rounded-pill">View Record</span>
+                </a>
+            {% empty %}
+                <div class="list-group-item text-center text-muted py-4">No appointment history found for this patient.</div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

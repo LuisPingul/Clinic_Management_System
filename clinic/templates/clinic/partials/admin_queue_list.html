@@ -1,0 +1,32 @@
+{% regroup queue_data by appointment_date as grouped_appointments %}
+
+{% for group in grouped_appointments %}
+    <h6 class="small text-muted fw-bold mt-3 mb-2">{{ group.grouper }}</h6>
+    <ul class="list-group list-group-flush mb-4">
+        {% for appointment in group.list %}
+            <li class="list-group-item d-flex justify-content-between align-items-center py-3 border border-light shadow-sm mb-2 rounded bg-white">
+                <div>
+                    <strong>{{ appointment.patient.first_name }} {{ appointment.patient.last_name }}</strong> 
+                    <br>
+                    <small class="text-muted">Dr. {{ appointment.doctor.name }} at {{ appointment.appointment_time }}</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <select class="form-select form-select-sm status-dropdown {% if appointment.status == 'CLEARED' %}bg-secondary text-white{% else %}bg-info text-white{% endif %}" 
+                            data-url="{% url 'update_status' appointment.id %}" 
+                            style="width: 180px; font-weight: bold; border: none; border-radius: 20px; cursor: pointer;"
+                            {% if appointment.status == 'CLEARED' %}disabled{% endif %}>
+                        <option value="SCHEDULED" {% if appointment.status == 'SCHEDULED' %}selected{% endif %}>Scheduled</option>
+                        <option value="WAITING" {% if appointment.status == 'WAITING' %}selected{% endif %}>Waiting in Lobby</option>
+                        <option value="LATE" {% if appointment.status == 'LATE' %}selected{% endif %}>Late</option>
+                        <option value="IN_CONSULTATION" {% if appointment.status == 'IN_CONSULTATION' %}selected{% endif %}>In Consultation</option>
+                        <option value="CLEARED" {% if appointment.status == 'CLEARED' %}selected{% endif %}>Cleared / Paid</option>
+                        <option value="NO_SHOW" {% if appointment.status == 'NO_SHOW' %}selected{% endif %}>No-Show</option>
+                    </select>
+                    <a href="{% url 'view_record' appointment.id %}" class="btn btn-sm btn-outline-secondary px-3">View Record</a>
+                </div>
+            </li>
+        {% endfor %}
+    </ul>
+{% empty %}
+    <div class="p-3 text-center text-muted small bg-light rounded border">No appointments in this category.</div>
+{% endfor %}
